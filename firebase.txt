@@ -1,0 +1,113 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseArduino.h>
+
+
+
+
+#define WIFI_SSID "Redmi 5A"
+#define WIFI_PASSWORD "qwertyui"
+#define FIREBASE_HOST 
+#define FIREBASE_AUTH 
+//#define USER "PRODUCER - 01/Battery"
+
+String ID = "STSPSS001/Producer";
+uint8_t LED_Pin = D8;
+uint8_t voltageinput = A0;
+
+void setup() {
+  
+  pinMode(LED_Pin, OUTPUT);
+  pinMode(voltageinput, INPUT);
+  Serial.begin(115200);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  Serial.print("connected: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("hello world");
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+}
+
+//int n = 0;
+float inputVoltage = 0;
+int b = 0;
+
+//4.2 V --- 100 %
+//4.1 V --- 90 %
+//4.0 V --- 80 %
+//3.9 V --- 60 %
+//3.8 V --- 40 %
+//3.7 V --- 20 %
+//3.6 V --- 0 %
+
+void batteryPercent(){
+  inputVoltage = analogRead(voltageinput);
+  inputVoltage = inputVoltage / 168.5752 ;
+  if(inputVoltage > 4){
+    b = 100;
+  } else if (inputVoltage > 3.95) {
+    b = 95;
+  } else if (inputVoltage > 3.9) {
+    b = 90;
+  } else if (inputVoltage > 3.8) {
+    b = 85;
+  } else if (inputVoltage > 3.7) {
+    b = 80;
+  } else if (inputVoltage > 3.65) {
+    b = 75;
+  } else if (inputVoltage > 3.60) {
+    b = 70;
+  } else if (inputVoltage > 3.55) {
+    b = 65;
+  } else if (inputVoltage > 3.50) {
+    b = 60;
+  } else if (inputVoltage > 3.45) {
+    b = 50;
+  } else if (inputVoltage > 3.40) {
+    b = 40;
+  } else if (inputVoltage > 3.35) {
+    b = 35;
+  } else if (inputVoltage > 3.33) {
+    b = 30;
+  } else if (inputVoltage > 3.2) {
+    b = 25;
+  } else if (inputVoltage > 3.15) {
+    b = 25;
+  } else if (inputVoltage > 3.1) {
+    b = 15;
+  } else if (inputVoltage > 3.05) {
+    b = 10;
+  }  else if (inputVoltage > 3.0) {
+    b = 0;
+  }
+}
+
+void loop() {
+//  n++;
+  batteryPercent();
+  Serial.print("Voltage,battery =");Serial.println(inputVoltage);Serial.println(",");Serial.println(b);
+  Firebase.setFloat(ID+"/battery", b);
+  if (Firebase.failed()) {
+      Serial.print("setting /number failed:");
+      Serial.println(Firebase.error());  
+      delay(2000);
+      return;
+  }
+  if(Firebase.getBool(ID+"/transfer")){
+    digitalWrite(LED_Pin, HIGH);
+  } else {
+    digitalWrite(LED_Pin, LOW);
+  }
+  if (Firebase.failed()) {
+      delay(2000);
+      Serial.print("transfer error");
+      Serial.println(Firebase.error());  
+      return;
+  }
+  b = 0;
+  delay(2000);
+}
